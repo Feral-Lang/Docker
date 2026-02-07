@@ -1,0 +1,108 @@
+let io = import('std/io');
+let fs = import('std/fs');
+let os = import('std/os');
+
+let core = import('./core');
+
+let ROOT_DIR = ''.path();
+
+let setRoot = fn(path) { ROOT_DIR = path; };
+
+let up = fn(group, apps) {
+    if apps == nil || apps.empty() {
+        return startAll(group);
+    }
+    let fileList = fs.walkDir(ROOT_DIR, fs.WALK_RECURSE, '(.*)\\.yml');
+    fileList.sort();
+    for app in apps.each() {
+        let dir = getDirForApp(app, fileList);
+        if dir == nil {
+            io.cprintln('-- {y}Skipping invalid app{0}: {c}', app, '{0}');
+            continue;
+        }
+        let cwd = os.getCWD();
+        defer os.setCWD(cwd);
+        os.setCWD(dir);
+        if !start(app) { return false; }
+    }
+    return true;
+};
+
+let down = fn(group, apps) {
+    if apps == nil || apps.empty() {
+        return stopAll(group);
+    }
+    let fileList = fs.walkDir(ROOT_DIR, fs.WALK_RECURSE, '(.*)\\.yml');
+    fileList.sort(rev = true);
+    for app in apps.each() {
+        let dir = getDirForApp(app, fileList);
+        if dir == nil {
+            io.cprintln('-- {y}Skipping invalid app{0}: {c}', app, '{0}');
+            continue;
+        }
+        let cwd = os.getCWD();
+        defer os.setCWD(cwd);
+        os.setCWD(dir);
+        if !stop(app) { return false; }
+    }
+    return true;
+};
+
+let startAll = fn(group) {
+    let groups = fs.walkDir(ROOT_DIR, fs.WALK_DIRS);
+    groups.sort();
+    let cwd = os.getCWD();
+    defer os.setCWD(cwd);
+    for grp in groups.each() {
+        if group != nil && grp.str().find(group) < 0 {
+            io.cprintln('-- {y}Skipping group{0}: {c}', grp, '{0}');
+            continue;
+        }
+        io.cprintln('-- {y}Starting group{0}: {c}', grp, '{0}');
+        os.setCWD(grp);
+        if core.runCmd("docker compose pull", 3) != 0 { return false; }
+        core.runCmd("docker compose up -d --remove-orphans");
+    }
+    core.runCmd("docker system prune -f");
+    return true;
+};
+
+let stopAll = fn(group) {
+    let groups = fs.walkDir(ROOT_DIR, fs.WALK_DIRS);
+    groups.sort(rev = true);
+    let cwd = os.getCWD();
+    defer os.setCWD(cwd);
+    for grp in groups.each() {
+        if group != nil && grp.str().find(group) < 0 {
+            io.cprintln('-- {y}Skipping group{0}: {c}', grp, '{0}');
+            continue;
+        }
+        io.cprintln('-- {y}Stopping group{0}: {c}', grp, '{0}');
+        os.setCWD(grp);
+        core.runCmd("docker compose down");
+    }
+    return true;
+};
+
+let start = fn(app) {
+    io.cprintln('-- {y}Starting app{0}: {c}', app, '{0}');
+    if core.runCmd("docker compose pull " + app, 3) != 0 { return false; }
+    core.runCmd("docker compose up -d " + app + " --remove-orphans");
+    return true;
+};
+
+let stop = fn(app) {
+    io.cprintln('-- {y}Stopping app{0}: {c}', app, '{0}');
+    core.runCmd("docker compose down " + app);
+    return true;
+};
+
+let getDirForApp = fn(app, files) {
+    let appStr = 'container_name: ' + app;
+    for file in files.each() {
+        let data = fs.fopen(file, 'r').readAll();
+        if data.find(appStr) < 0 { continue; }
+        return file.parent().parent();
+    }
+    return nil;
+};

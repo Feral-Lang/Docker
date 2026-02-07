@@ -1,0 +1,42 @@
+#!/usr/bin/env feral
+
+let io = import('std/io');
+let os = import('std/os');
+let argparse = import('std/argparse');
+
+let compose = import('docker/compose');
+
+let args = argparse.new(feral.args);
+args.addArg("subcmd").setValReqd(true).setHelp("Subcommand - one of: u(p)|d(own)|r(estart)");
+args.addArg("group").addOpts('--group', '-g').setValReqd(true).setHelp("Work on a specific group (folder) instead of all subfolders/specific applications");
+args.parse();
+
+let COMPOSE_ROOT = os.getEnv('COMPOSE_ROOT');
+
+if COMPOSE_ROOT == nil {
+    io.println('Environment variable `COMPOSE_ROOT` must be set to the top level directory of the docker compose stack.');
+    feral.exit(1);
+}
+
+compose.setRoot(COMPOSE_ROOT.path());
+
+let subCmd = args.getValue('subcmd');
+let group = args.getValue('group');
+let apps = args.getPassthrough();
+
+if subCmd == 'u' || subCmd == 'up' {
+    if !compose.up(group, apps) {
+        feral.exit(1);
+    }
+} elif subCmd == 'd' || subCmd == 'down' {
+    if !compose.down(group, apps) {
+        feral.exit(1);
+    }
+} elif subCmd == 'r' || subCmd == 'restart' {
+    if !compose.down(group, apps) || !compose.up(group, apps) {
+        feral.exit(1);
+    }
+} else {
+    io.println('Invalid subcommand, possible options are: u(p)|d(own)|r(estart)');
+    feral.exit(1);
+}
