@@ -1,0 +1,14 @@
+let io = import('std/io');
+let os = import('std/os');
+
+let runCmd = fn(cmd, maxTries = 1) {
+	io.cprintln('-- {y}Running{0}: {g}', cmd, '{0}');
+	let tryCtr = 0;
+	let res = 0;
+	while tryCtr++ < maxTries && (res = os.system(cmd)) != 0 {
+		if tryCtr < maxTries {
+			io.cprintln('-- {y}Command failed{0}, {y}retrying {0}({m}', tryCtr, '{0}/{m}', maxTries, '{0})');
+		}
+	}
+	return res;
+};
