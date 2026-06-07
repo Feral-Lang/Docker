@@ -6,11 +6,11 @@ let argparse = import('std/argparse');
 
 let compose = import('docker/compose');
 
-let args = argparse.new(feral.args);
-args.addArg("host").setValReqd(true).setReqd(true).setHelp("Host to connect to");
-args.addArg("subcmd").setValReqd(true).setHelp("Subcommand - one of: u(p)|d(own)|r(estart)|p(ull)");
-args.addArg("group").addOpts('--group', '-g').setValReqd(true).setHelp("Work on a specific group (folder) instead of all subfolders/specific applications");
-args.parse();
+let args = argparse.new('Docker', 'Docker compose commands on remote machines');
+args.addOpt("host").setReqd(true).setHelp("Host to connect to");
+args.addOpt("subcmd").setReqd(true).setHelp("Subcommand - one of: u(p)|d(own)|r(estart)|p(ull)");
+args.addOpt("group").addOpts('--group', '-g').setNargs(1).setHelp("Work on a specific group (folder) instead of all subfolders/specific applications");
+args.parse(feral.args);
 
 compose.init(args.getValue('host'));
 
