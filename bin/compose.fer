@@ -7,8 +7,8 @@ let argparse = import('std/argparse');
 let compose = import('docker/compose');
 
 let args = argparse.new('Docker', 'Docker compose commands on remote machines');
-args.addOpt("host").setReqd(true).setHelp("Host to connect to");
-args.addOpt("subcmd").setReqd(true).setHelp("Subcommand - one of: u(p)|d(own)|r(estart)|p(ull)");
+args.addPos("host").setReqd(true).setHelp("Host to connect to");
+args.addPos("subcmd").setReqd(true).setHelp("Subcommand - one of: u(p)|d(own)|r(estart)|p(ull)|up(g)rade");
 args.addOpt("group").addOpts('--group', '-g').setNargs(1).setHelp("Work on a specific group (folder) instead of all subfolders/specific applications");
 args.parse(feral.args);
 
@@ -34,7 +34,11 @@ if subCmd == 'u' || subCmd == 'up' {
     if !compose.pull(group, apps) {
         feral.exit(1);
     }
+} elif subCmd == 'g' || subCmd == 'upgrade' {
+    if !compose.down(group, apps) || !compose.pull(group, apps) || !compose.up(group, apps) {
+        feral.exit(1);
+    }
 } else {
-    io.println('Invalid subcommand, possible options are: u(p)|d(own)|r(estart)|p(ull)');
+    io.println('Invalid subcommand, possible options are: u(p)|d(own)|r(estart)|p(ull)|up(g)rade');
     feral.exit(1);
 }
