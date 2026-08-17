@@ -116,6 +116,7 @@ let pullAll = fn(group) {
         if !run("docker compose --project-directory " + grp.str() + " pull", 3) { return false; }
     }
     run("docker system prune -f");
+    run("docker builder prune -af");
     return true;
 };
 
@@ -135,6 +136,7 @@ let pullImage = fn(app, dir) {
     io.cprintln(infra.prefix(), ' {y}pulling image for app {c}', app, '{0} ...');
     if !run('docker compose --project-directory ' + dir.str() + ' pull ' + app, 3) { return false; }
     run("docker system prune -f");
+    run("docker builder prune -af");
     return true;
 };
 
